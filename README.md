@@ -1,6 +1,6 @@
 # Zamówienia PRO — PWA (działa na telefonie)
 
-To jest prosta „apka” webowa (PWA) do zbierania zamówień w kuchni.
+To jest prosta „apka” webowa (PWA) do zbierania zamówień w kuchni....
 
 ## Jak uruchomić najprościej (na komputerze)
 1. Rozpakuj ZIP.
