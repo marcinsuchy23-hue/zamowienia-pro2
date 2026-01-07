@@ -1,200 +1,36 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no" />
-  <meta name="theme-color" content="#111111" />
-  <meta name="description" content="Ulepszona aplikacja do zarządzania zamówieniami PRO – PWA dla kuchni i hurtowni" />
-  <title>Zamówienia PRO v2</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icon-192.png">
-  <!-- cache-bust for GitHub Pages / iOS Safari (updates show instantly) -->
-  <link rel="stylesheet" href="styles.css?v=20260107m" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Zamówienia – Prosta wersja</title>
+  <meta name="theme-color" content="#1a1a1a" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="app-header">
-    <div class="brand">
-      <div class="brand__title">Zamówienia PRO v2</div>
-      <div class="brand__sub" id="hdrSub">—</div>
-    </div>
-    <button class="icon-btn" id="btnMenu" aria-label="Menu">
-      <span class="icon">☰</span>
-    </button>
+  <header>
+    <h1>Zamówienia</h1>
+    <button id="btnClear">Wyczyść koszyk</button>
   </header>
 
-  <main class="app">
-    <section class="panel" id="panelOrder">
-      <div class="card order-card">
-        <!-- RZĄD 1: Sekcja + Kategoria -->
-        <div class="row row--gap order-row1">
-          <div class="field">
-            <label for="filterSection">Sekcja</label>
-            <select id="filterSection" aria-label="Wybierz sekcję"></select>
-          </div>
-          <div class="field">
-            <label for="filterCategory">Kategoria</label>
-            <select id="filterCategory" aria-label="Wybierz kategorię"></select>
-          </div>
-        </div>
-
-        <!-- RZĄD 2: Ulubione + Odśwież + Baza + Export -->
-        <div class="row row--gap order-row2" style="align-items:flex-end">
-          <div class="order-actions order-actions--4">
-            <button class="btn smallbtn favbtn" id="btnFav" type="button" aria-label="Ulubione" title="Ulubione">⭐<span class="hide-mobile"> Ulubione</span></button>
-            <button class="btn iconbtn" id="btnQuickRefresh" type="button" aria-label="Odśwież bazę" title="Odśwież bazę">
-              <span class="icon">🔄</span><span class="hide-mobile"> Odśwież bazę</span>
-            </button>
-            <button class="btn" id="btnGoCatalog" type="button" aria-label="Baza produktów">📚<span class="hide-mobile"> Baza</span></button>
-            <button class="btn primary" id="btnGoExport" type="button" aria-label="Eksport zamówienia">📤<span class="hide-mobile"> Eksport</span></button>
-            <button class="btn" id="btnCart" type="button" aria-label="Koszyk">🧺<span class="hide-mobile"> Koszyk</span> <span class="badge" id="cartCount">0</span></button>
-          </div>
-        </div>
-
-        <!-- RZĄD 3: Szukaj + Koszyk -->
-        <div class="row row--gap order-row3" style="align-items:flex-end">
-          <div class="field">
-            <label for="filterSearch">Szukaj</label>
-            <input id="filterSearch" placeholder="np. ogórek" autocomplete="off" aria-label="Szukaj produktu" />
-          </div>
-        </div>
-      </div>
-
-      <div class="list-head">
-        <div class="list-head__title">Produkty</div>
-        <div class="list-head__hint">Wpisz ilość i dodaj do koszyka</div>
-      </div>
-
-      <div class="list" id="productList"></div>
-      <div id="loadingSpinner" class="hidden">Ładowanie...</div> <!-- Nowy: spinner -->
-    </section>
-
-    <section class="panel hidden" id="panelCatalog">
-      <div class="card">
-        <div class="row row--gap" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div style="font-weight:800">📚 Baza produktów</div>
-          <div class="row row--gap">
-            <button class="btn" id="btnBackFromCatalog" type="button" aria-label="Wróć">← Wróć</button>
-            <button class="btn" id="btnImportCatalog" type="button" aria-label="Import z Google Sheets">⬇ Import z Google Sheets</button>
-            <button class="btn" id="btnExportCatalog" type="button" aria-label="Export CSV">⬆ Export CSV</button>
-          </div>
-        </div>
-        <div class="row row--gap">
-          <div class="field">
-            <label for="newProdName">Nazwa produktu</label>
-            <input id="newProdName" placeholder="np. Masło" autocomplete="off" aria-label="Nazwa nowego produktu" />
-          </div>
-          <div class="field">
-            <label for="newProdSections">Sekcje (opcjonalnie)</label>
-            <input list="secDatalist" id="newProdSections" placeholder="np. Grill,Palniki" autocomplete="off" aria-label="Sekcje produktu" />
-            <datalist id="secDatalist"></datalist>
-          </div>
-        </div>
-        <!-- Dodaj resztę HTML z oryginalnego, jeśli truncated -->
-      </div>
-    </section>
-
-    <!-- Panel eksportu – bez zmian, ale dodaj aria -->
-    <section class="panel hidden" id="panelExport">
-      <div class="card">
-        <div class="export-top">
-          <div class="export-title" id="expTitle">ZAMÓWIENIE</div>
-          <div class="export-date" id="expDate">—</div>
-        </div>
-        <div class="export-meta" id="expMeta">—</div>
-        
-        <div class="list-head" style="margin-top:6px">
-          <div class="list-head__title">Koszyk</div>
-          <div class="list-head__hint">Tu są zamówione pozycje • eksport poniżej</div>
-        </div>
-        <div class="card basket" id="basketExport"></div>
-
-        <div class="row row--gap" style="justify-content:flex-end;margin-top:10px">
-          <button class="btn" id="btnNewOrder2" aria-label="Nowe zamówienie">🧹 Nowe zamówienie</button>
-          <button class="btn danger" id="btnClearCart" aria-label="Wyczyść koszyk">🗑 Wyczyść koszyk</button>
-        </div>
-
-        <textarea id="exportText" readonly aria-label="Tekst eksportu"></textarea>
-
-        <div class="row row--gap row--end">
-          <button class="btn" id="btnBack" aria-label="Wróć">← Wróć</button>
-          <button class="btn" id="btnCopy" aria-label="Kopiuj tekst">Kopiuj</button>
-          <button class="btn" id="btnPrint" aria-label="Drukuj PDF Standard">🖨 PDF Standard</button>
-          <button class="btn primary" id="btnPrintHurt" aria-label="Drukuj PDF Hurtownia">🖨 PDF Hurtownia</button>
-        </div>
-
-        <div class="small">
-          📌 PDF działa przez „Drukuj” → „Zapisz jako PDF” / „Udostępnij jako PDF” (Android/iPhone).
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- Sheet z nową opcją dark/light -->
-  <div class="sheet hidden" id="sheet" role="dialog" aria-modal="true">
-    <div class="sheet__backdrop" id="sheetBackdrop" aria-hidden="true"></div>
-    <div class="sheet__panel">
-      <div class="sheet__title">Ustawienia</div>
-
-      <div class="card" style="margin:10px 0 14px;padding:12px;border:1px solid rgba(255,255,255,.10);border-radius:14px">
-        <div style="font-weight:800;margin-bottom:8px">🔴 Tryb LIVE (wspólne zamówienie)</div>
-
-        <div class="field">
-          <label for="orderCode">Kod zamówienia (dołącz / podejrzyj)</label>
-          <input id="orderCode" placeholder="np. META-7F3A" autocomplete="off" aria-label="Kod zamówienia" />
-          <div class="small">Po „Utwórz nowe” dostaniesz kod. Na drugim telefonie wpisz ten sam kod i kliknij „Dołącz”.</div>
-        </div>
-
-        <div class="row row--gap row--end" style="margin-top:8px">
-          <button class="btn" id="btnCreateOrder" type="button" aria-label="Utwórz nowe zamówienie">Utwórz nowe</button>
-          <button class="btn" id="btnJoinOrder" type="button" aria-label="Dołącz do zamówienia">Dołącz</button>
-          <button class="btn danger" id="btnCloseOrder" type="button" style="display:none" aria-label="Zamknij zamówienie">Zamknij zamówienie</button>
-        </div>
-
-        <div class="small" id="liveStatus" style="margin-top:6px;opacity:.85">LIVE: —</div>
-      </div>
-
-      <div class="field">
-        <label for="userSelect">Wybierz osobę (lista z Firebase)</label>
-        <select id="userSelect" aria-label="Wybierz użytkownika">
-          <option value="">— (wpiszę ręcznie)</option>
-        </select>
-        <div class="small">Jeśli lista pusta, wpisz imię ręcznie niżej (albo sprawdź kolekcję <b>people</b>).</div>
-      </div>
-
-      <div class="field">
-        <label for="userName">Twoje imię (kto dodaje)</label>
-        <input id="userName" placeholder="np. Marcin" autocomplete="off" aria-label="Twoje imię" />
-      </div>
-
-      <div class="field">
-        <label for="restName">Nazwa restauracji (nagłówek)</label>
-        <input id="restName" placeholder="np. Bistro X" autocomplete="off" aria-label="Nazwa restauracji" />
-      </div>
-
-      <div class="field">
-        <label for="themeSelect">Motyw (dark/light)</label>
-        <select id="themeSelect" aria-label="Wybierz motyw">
-          <option value="auto">Automatyczny (systemowy)</option>
-          <option value="dark">Ciemny</option>
-          <option value="light">Jasny</option>
-        </select>
-      </div>
-
-      <div class="row row--gap row--end">
-        <button class="btn" id="btnCloseSheet" aria-label="Zamknij ustawienia">Zamknij</button>
-        <button class="btn primary" id="btnSaveSettings" aria-label="Zapisz ustawienia">Zapisz</button>
-      </div>
-      <div class="small">
-        Tip: dodaj tę stronę do ekranu głównego (PWA), żeby działała jak apka.
-      </div>
-    </div>
+  <div class="filters">
+    <select id="sectionFilter">
+      <option value="">Wszystkie sekcje</option>
+    </select>
+    <select id="categoryFilter">
+      <option value="">Wszystkie kategorie</option>
+    </select>
+    <input type="search" id="search" placeholder="Szukaj produktu..." />
   </div>
 
-  <noscript>Proszę włączyć JavaScript, aby aplikacja działała.</noscript>
+  <div id="productList" class="product-list"></div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js?v=20260107m"></script>
-  <script src="app.js?v=20260107m"></script>
+  <footer>
+    <div>Koszyk: <span id="cartCount">0</span></div>
+    <button id="btnExport">Eksportuj zamówienie</button>
+  </footer>
+
+  <script src="app.js"></script>
 </body>
 </html>
