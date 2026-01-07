@@ -1,11 +1,11 @@
 // Bump on every deploy: forces iOS/Safari to pick up the new UI
-const CACHE_NAME = "zamowienia-pro-20260106l";
+const CACHE_NAME = "zamowienia-pro-20260107m";
 const ASSETS = [
   "./",
   "./index.html",
   // Keep the same version as in index.html to avoid duplicated cache entries
-  "./styles.css?v=20260106l",
-  "./app.js?v=20260106l",
+  "./styles.css?v=20260107m",
+  "./app.js?v=20260107m",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png"
@@ -37,7 +37,10 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
           return res;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch((err) => {
+          console.error('Navigate fetch error:', err);
+          return caches.match("./index.html");
+        })
     );
     return;
   }
@@ -55,7 +58,10 @@ self.addEventListener("fetch", (event) => {
         const copy = res.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return res;
-      }).catch(() => caches.match(event.request))
+      }).catch((err) => {
+        console.error('App shell fetch error:', err);
+        return caches.match(event.request);
+      })
     );
     return;
   }
