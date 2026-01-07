@@ -1,3 +1,13 @@
+/* --- Mobile keyboard / small screens stability --- */
+html{
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+body.kb-open .app-header{ padding:8px 10px; }
+body.kb-open .brand__sub{ display:none; }
+body.kb-open .order-row2{ display:none; } /* hide action row while typing to free space */
+body.kb-open .order-row1{ margin-bottom:6px; }
+
 /* Minimal, mobilne UI */
 :root{
   --bg:#0b0c0f;
@@ -12,9 +22,6 @@
   --radius:16px;
   --shadow: 0 10px 25px rgba(0,0,0,.35);
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  /* dynamic viewport height (fix for mobile keyboards) */
-  --vh: 1vh;
-  --vvh: 1vh;
 }
 
 
@@ -31,8 +38,6 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif;
   background: linear-gradient(180deg, #090a0d, #0b0c0f);
   color:var(--text);
-  /* use dynamic viewport height where possible */
-  min-height: calc(var(--vh) * 100);
 }
 
 .app-header{
@@ -74,17 +79,6 @@ body{
   z-index: 10;
   backdrop-filter: blur(10px);
 }
-
-/* When the virtual keyboard is open on small screens, sticky cards waste space.
-   JS toggles body.kbd-open based on visualViewport height. */
-body.kbd-open .order-card{
-  position: static;
-  top: auto;
-}
-
-/* Slightly tighter spacing when keyboard is open */
-body.kbd-open .app{ padding-top: 10px; padding-bottom: 10px; }
-body.kbd-open .card{ margin-bottom: 10px; }
 
 .order-actions{
   display:flex;
