@@ -1,4 +1,4 @@
-// app.js – wersja z poprawioną funkcją load() i save()
+// app.js – wersja z load(), save(), renderAll(), renderProducts() i testowymi produktami
 
 // --- Keyboard state (small screens): compact UI while typing ---
 function __updateKeyboardState(){
@@ -61,8 +61,20 @@ __updateKeyboardState();
 
   const LS_KEY = "zamowienia_pro_v2";
 
+  // Podstawowy stan aplikacji
+  let state = {
+    catalog: [],
+    cart: [],
+    settings: {
+      userName: "",
+      restName: "",
+      catalogCsvUrl: ""
+    }
+    // możesz dodać więcej pól, jeśli potrzebujesz
+  };
+
   // ------------------------------
-  //   NOWE FUNKCJE – load i save
+  //   FUNKCJE ZAPISU I ODCZYTU
   // ------------------------------
   function load() {
     try {
@@ -70,13 +82,13 @@ __updateKeyboardState();
       if (saved) {
         const parsed = JSON.parse(saved);
         Object.assign(state, parsed);
-        console.log("Stan aplikacji załadowany z localStorage:", state);
+        console.log("Stan załadowany z localStorage:", state);
       } else {
         console.log("Brak zapisanego stanu – startujemy od czystej bazy");
       }
     } catch (e) {
-      console.error("Błąd ładowania stanu z localStorage:", e);
-      localStorage.removeItem(LS_KEY); // wyczyść uszkodzony zapis
+      console.error("Błąd ładowania localStorage:", e);
+      localStorage.removeItem(LS_KEY);
     }
   }
 
@@ -90,60 +102,105 @@ __updateKeyboardState();
   }
 
   // ------------------------------
-  //   RESZTA TWOJEGO KODU
-  //   (wklej tutaj swoją oryginalną logikę po tych funkcjach)
+  //   TESTOWE PRODUKTY (jeśli baza pusta)
   // ------------------------------
-  // ... Twój cały kod poniżej ...
-
-  // Przykładowo – jeśli masz state, to dodaj taki obiekt na początku
-  let state = {
-    catalog: [],
-    cart: [],
-    settings: {
-      userName: "",
-      restName: "",
-      catalogCsvUrl: ""
-    },
-    // ... inne pola, które masz
-  };
-
   function ensureSeed() {
     if (!state.catalog || state.catalog.length === 0) {
       state.catalog = [
-        { id: "test1", name: "Ogórek", category: "Warzywa", sections: "Grill", createdAt: Date.now() },
-        { id: "test2", name: "Pomidor", category: "Warzywa", sections: "", createdAt: Date.now() },
-        { id: "test3", name: "Ser żółty", category: "Nabiał", sections: "", createdAt: Date.now() },
-        { id: "test4", name: "Frytki", category: "Mrożonki", sections: "Zimna", createdAt: Date.now() },
-        { id: "test5", name: "Mleko", category: "Nabiał", sections: "", createdAt: Date.now() }
+        { id: "p1", name: "Ogórek zielony", category: "Warzywa", sections: "Grill", createdAt: Date.now() },
+        { id: "p2", name: "Pomidor malinowy", category: "Warzywa", sections: "", createdAt: Date.now() },
+        { id: "p3", name: "Ser żółty gouda", category: "Nabiał", sections: "", createdAt: Date.now() },
+        { id: "p4", name: "Frytki 1kg", category: "Mrożonki", sections: "Zimna", createdAt: Date.now() },
+        { id: "p5", name: "Mleko 3.2%", category: "Nabiał", sections: "", createdAt: Date.now() },
+        { id: "p6", name: "Cebula", category: "Warzywa", sections: "Palniki", createdAt: Date.now() }
       ];
       save();
-      console.log("Dodano 5 przykładowych produktów do bazy");
+      console.log("Dodano 6 przykładowych produktów do bazy");
     }
   }
 
+  // ------------------------------
+  //   RENDEROWANIE LISTY PRODUKTÓW
+  // ------------------------------
+  function renderProducts() {
+    console.log("renderProducts() – rysuję listę produktów");
+    const container = document.getElementById('productList');
+    if (!container) {
+      console.error("Nie znaleziono elementu #productList");
+      return;
+    }
+
+    container.innerHTML = '';
+
+    const products = state.catalog || [];
+
+    if (products.length === 0) {
+      container.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">Brak produktów w bazie</div>';
+      return;
+    }
+
+    products.forEach(product => {
+      const item = document.createElement('div');
+      item.className = 'item row row--gap';
+      item.style.marginBottom = '12px';
+      item.style.padding = '12px';
+      item.style.background = 'rgba(255,255,255,0.05)';
+      item.style.borderRadius = '12px';
+      item.innerHTML = `
+        <div style="flex:1; font-weight:600;">${product.name || 'Bez nazwy'}</div>
+        <div style="color:#aaa; min-width:100px;">${product.category || '-'}</div>
+        <input type="number" min="1" step="1" class="qty" placeholder="ilość" data-id="${product.id}" style="width:80px; text-align:center;" />
+        <button class="btn primary add-to-cart" data-id="${product.id}">Dodaj</button>
+      `;
+      container.appendChild(item);
+    });
+
+    console.log(`Wyrenderowano ${products.length} produktów`);
+  }
+
+  function renderAll() {
+    console.log("renderAll() uruchomione");
+    renderProducts();
+    // Tutaj możesz dodać render koszyka, nagłówka itp. w przyszłości
+    // np. renderCart();
+    // updateCartCount();
+  }
+
+  // ------------------------------
+  //   PODPINANIE PRZYCISKÓW (wire)
+  // ------------------------------
+  function wire() {
+    console.log("wire() – podpinam eventy");
+
+    // Przykład: przycisk "Dodaj" (jeśli używasz klasy .add-to-cart)
+    document.querySelectorAll('.add-to-cart').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.dataset.id;
+        const qtyInput = e.target.previousElementSibling; // input qty
+        const qty = parseInt(qtyInput.value) || 1;
+        console.log(`Dodaję do koszyka produkt ${id} w ilości ${qty}`);
+        // Tutaj dodaj logikę dodawania do koszyka (np. state.cart.push(...))
+        qtyInput.value = ''; // wyczyść pole
+      });
+    });
+
+    // Dodaj inne eventy, np. przycisk "Baza", "Eksport", "Ulubione" itd.
+    // document.getElementById('btnGoCatalog').addEventListener('click', () => { ... });
+  }
+
+  // ------------------------------
+  //   START APLIKACJI
+  // ------------------------------
   function boot(){
     console.log("boot() started");
-    load();               // ← teraz działa
-    ensureSeed();         // doda testowe produkty, jeśli baza pusta
-    renderAll();          // ← zakładam, że masz taką funkcję
-    wire();               // ← zakładam, że masz taką funkcję
-    initFirebase();
-    liveBindUI();
-    liveLoadPeople();
-    if(LIVE.enabled && LIVE.orderId){
-      liveUseOrder(LIVE.orderId).catch(e=>console.error(e));
-    }
-
-    // ... reszta Twojego kodu w boot()
+    load();
+    ensureSeed();
+    renderAll();
+    wire();
+    // Tutaj możesz dodać initFirebase(), liveBindUI() itp. z Twojego oryginalnego kodu
+    console.log("Aplikacja uruchomiona – gotowa do użycia");
   }
 
-  // ------------------------------
-  //   TU WSTAW CAŁĄ RESZTĘ SWOJEGO KODU
-  //   (wszystkie inne funkcje: renderAll, wire, renderProducts, addToCart, etc.)
-  // ------------------------------
-  // ... wklej tutaj swój oryginalny kod ...
-
-  // Na samym końcu wywołaj boot
   boot();
 
 })();
