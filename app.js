@@ -16,6 +16,38 @@
     }, delayMs);
   }
 
+  // --- Dynamic viewport height (fix for small screens + virtual keyboard) ---
+  function setVH(){
+    try{
+      document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+      const vv = window.visualViewport;
+      const vvh = (vv && vv.height) ? vv.height : window.innerHeight;
+      document.documentElement.style.setProperty('--vvh', `${vvh * 0.01}px`);
+    }catch(e){}
+  }
+  window.addEventListener('resize', setVH);
+  window.addEventListener('orientationchange', setVH);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', setVH);
+    window.visualViewport.addEventListener('scroll', setVH);
+  }
+  setVH();
+
+  // Toggle a class when keyboard is likely open, so we can disable sticky UI that wastes space
+  function updateKeyboardClass(){
+    try{
+      const vv = window.visualViewport;
+      const vvh = (vv && vv.height) ? vv.height : window.innerHeight;
+      const kbdOpen = (window.innerHeight - vvh) > 120; // heuristic
+      document.body.classList.toggle('kbd-open', !!kbdOpen);
+    }catch(e){}
+  }
+  window.addEventListener('resize', updateKeyboardClass);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', updateKeyboardClass);
+  }
+  setTimeout(updateKeyboardClass, 0);
+
 
 function ensureInputVisible(el){
   try{
@@ -46,6 +78,17 @@ function ensureInputVisible(el){
     }
   }catch(e){}
 }
+
+  // Global focus handler: on small screens, ensure focused input is visible above keyboard
+  document.addEventListener('focusin', (e) => {
+    const t = e.target;
+    if(!t) return;
+    if(t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT'){
+      // give the keyboard a moment to open
+      setTimeout(()=>ensureInputVisible(t), 180);
+      setTimeout(updateKeyboardClass, 220);
+    }
+  }, { passive: true });
 
   const LS_KEY = "zamowienia_pro_v1";
   const DEFAULT_CATS = ["Warzywa","Mięso","Nabiał","Mrożonki","Suchy magazyn","Przyprawy","Owoce","Ryby","Inne"];
