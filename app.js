@@ -1,206 +1,159 @@
-// app.js – wersja z load(), save(), renderAll(), renderProducts() i testowymi produktami
+const products = [
+  { id: "1", name: "Ogórek zielony", category: "Warzywa", section: "Grill" },
+  { id: "2", name: "Pomidor malinowy", category: "Warzywa", section: "Sałatki" },
+  { id: "3", name: "Ser żółty gouda", category: "Nabiał", section: "Wydawka" },
+  { id: "4", name: "Frytki 1kg", category: "Mrożonki", section: "Zimna" },
+  { id: "5", name: "Mleko 3.2%", category: "Nabiał", section: "" },
+  { id: "6", name: "Cebula", category: "Warzywa", section: "Palniki" },
+  { id: "7", name: "Kurczak filet", category: "Mięso", section: "Grill" },
+];
 
-// --- Keyboard state (small screens): compact UI while typing ---
-function __updateKeyboardState(){
-  try{
-    const vv = window.visualViewport;
-    const h = vv && vv.height ? vv.height : window.innerHeight;
-    const full = window.innerHeight || h;
-    const keyboardOpen = (vv && vv.height) ? (vv.height < full - 120) : false;
-    document.body.classList.toggle('kb-open', !!keyboardOpen);
-  }catch(e){}
+let cart = []; // [{id, name, qty, category}, ...]
+
+const sectionFilter = document.getElementById("sectionFilter");
+const categoryFilter = document.getElementById("categoryFilter");
+const searchInput = document.getElementById("search");
+const productList = document.getElementById("productList");
+const cartCount = document.getElementById("cartCount");
+const btnExport = document.getElementById("btnExport");
+const btnClear = document.getElementById("btnClear");
+
+// Wypełnij select-y unikalnymi wartościami
+function populateFilters() {
+  const sections = [...new Set(products.map(p => p.section).filter(Boolean))];
+  const categories = [...new Set(products.map(p => p.category))];
+
+  sections.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s;
+    sectionFilter.appendChild(opt);
+  });
+
+  categories.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    categoryFilter.appendChild(opt);
+  });
 }
 
-if(window.visualViewport){
-  window.visualViewport.addEventListener('resize', __updateKeyboardState);
-  window.visualViewport.addEventListener('scroll', __updateKeyboardState);
+function renderProducts() {
+  const section = sectionFilter.value;
+  const category = categoryFilter.value;
+  const query = searchInput.value.toLowerCase();
+
+  const filtered = products.filter(p => {
+    if (section && p.section !== section) return false;
+    if (category && p.category !== category) return false;
+    if (query && !p.name.toLowerCase().includes(query)) return false;
+    return true;
+  });
+
+  productList.innerHTML = "";
+
+  filtered.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "product";
+    div.innerHTML = `
+      <div class="product-header">
+        <span class="product-name">${p.name}</span>
+        <span class="product-category">${p.category}</span>
+      </div>
+      <div class="qty-container">
+        <input type="number" min="1" class="qty-input" data-id="${p.id}" placeholder="ilość" />
+        <button class="add-btn" data-id="${p.id}">Dodaj</button>
+      </div>
+    `;
+    productList.appendChild(div);
+  });
+
+  // Obsługa przycisków "Dodaj"
+  document.querySelectorAll(".add-btn").forEach(btn => {
+    btn.addEventListener("click", addToCartFromButton);
+  });
+
+  // Enter w polu ilości
+  document.querySelectorAll(".qty-input").forEach(input => {
+    input.addEventListener("keypress", e => {
+      if (e.key === "Enter") {
+        addToCartFromInput(input);
+      }
+    });
+  });
 }
-window.addEventListener('resize', __updateKeyboardState);
-__updateKeyboardState();
 
-(() => {
+function addToCartFromButton(e) {
+  const id = e.target.dataset.id;
+  const input = e.target.previousElementSibling;
+  addToCart(id, input.value);
+  input.value = "";
+}
 
-  // --- iOS/Chrome: stabilizuj scroll przy klawiaturze ---
-  let __lastScrollY = 0;
-  let __scrollRestoreTimer = null;
-  function rememberScroll(){
-    __lastScrollY = window.scrollY || 0;
-  }
-  function restoreScrollSoon(delayMs=60){
-    if(__scrollRestoreTimer) clearTimeout(__scrollRestoreTimer);
-    __scrollRestoreTimer = setTimeout(()=>{
-      try { window.scrollTo({ top: __lastScrollY, left: 0, behavior: "auto" }); }
-      catch(e){ window.scrollTo(0, __lastScrollY); }
-    }, delayMs);
-  }
+function addToCartFromInput(input) {
+  const id = input.dataset.id;
+  addToCart(id, input.value);
+  input.value = "";
+}
 
-  function ensureInputVisible(el){
-    try{
-      if(!el) return;
-      const vv = window.visualViewport;
-      const rect = el.getBoundingClientRect();
-      const header = document.querySelector('.app-header');
-      const headerH = header ? header.getBoundingClientRect().height : 0;
-      const topPad = Math.round(headerH + 9);
-      const bottomPad = 22;
-      let viewH = (vv && vv.height) ? vv.height : window.innerHeight;
-
-      const desiredBottom = viewH - bottomPad;
-      if(rect.bottom > desiredBottom){
-        const delta = rect.bottom - desiredBottom;
-        window.scrollBy({ top: delta, left: 0, behavior: "auto" });
-        return;
-      }
-      const desiredTop = topPad;
-      if(rect.top < desiredTop){
-        const delta = rect.top - desiredTop;
-        window.scrollBy({ top: delta, left: 0, behavior: "auto" });
-      }
-    }catch(e){}
+function addToCart(id, qtyStr) {
+  const qty = parseInt(qtyStr, 10);
+  if (isNaN(qty) || qty < 1) {
+    alert("Wpisz poprawną ilość (liczba ≥ 1)");
+    return;
   }
 
-  const LS_KEY = "zamowienia_pro_v2";
+  const product = products.find(p => p.id === id);
+  if (!product) return;
 
-  // Podstawowy stan aplikacji
-  let state = {
-    catalog: [],
-    cart: [],
-    settings: {
-      userName: "",
-      restName: "",
-      catalogCsvUrl: ""
-    }
-    // możesz dodać więcej pól, jeśli potrzebujesz
-  };
-
-  // ------------------------------
-  //   FUNKCJE ZAPISU I ODCZYTU
-  // ------------------------------
-  function load() {
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        Object.assign(state, parsed);
-        console.log("Stan załadowany z localStorage:", state);
-      } else {
-        console.log("Brak zapisanego stanu – startujemy od czystej bazy");
-      }
-    } catch (e) {
-      console.error("Błąd ładowania localStorage:", e);
-      localStorage.removeItem(LS_KEY);
-    }
+  const existing = cart.find(item => item.id === id);
+  if (existing) {
+    existing.qty += qty;
+  } else {
+    cart.push({ ...product, qty });
   }
 
-  function save() {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(state));
-      console.log("Stan zapisany do localStorage");
-    } catch (e) {
-      console.error("Błąd zapisu do localStorage:", e);
-    }
+  updateCartCount();
+}
+
+function updateCartCount() {
+  const total = cart.reduce((sum, item) => sum + item.qty, 0);
+  cartCount.textContent = total;
+}
+
+function exportOrder() {
+  if (cart.length === 0) {
+    alert("Koszyk jest pusty");
+    return;
   }
 
-  // ------------------------------
-  //   TESTOWE PRODUKTY (jeśli baza pusta)
-  // ------------------------------
-  function ensureSeed() {
-    if (!state.catalog || state.catalog.length === 0) {
-      state.catalog = [
-        { id: "p1", name: "Ogórek zielony", category: "Warzywa", sections: "Grill", createdAt: Date.now() },
-        { id: "p2", name: "Pomidor malinowy", category: "Warzywa", sections: "", createdAt: Date.now() },
-        { id: "p3", name: "Ser żółty gouda", category: "Nabiał", sections: "", createdAt: Date.now() },
-        { id: "p4", name: "Frytki 1kg", category: "Mrożonki", sections: "Zimna", createdAt: Date.now() },
-        { id: "p5", name: "Mleko 3.2%", category: "Nabiał", sections: "", createdAt: Date.now() },
-        { id: "p6", name: "Cebula", category: "Warzywa", sections: "Palniki", createdAt: Date.now() }
-      ];
-      save();
-      console.log("Dodano 6 przykładowych produktów do bazy");
-    }
+  const lines = ["Zamówienie:", ""];
+  cart.forEach(item => {
+    lines.push(`${item.qty} × ${item.name} (${item.category})`);
+  });
+
+  const text = lines.join("\n");
+  navigator.clipboard.writeText(text).then(() => {
+    alert("Zamówienie skopiowane do schowka:\n\n" + text);
+  }).catch(() => {
+    alert("Nie udało się skopiować – oto tekst:\n\n" + text);
+  });
+}
+
+function clearCart() {
+  if (confirm("Na pewno wyczyścić koszyk?")) {
+    cart = [];
+    updateCartCount();
   }
+}
 
-  // ------------------------------
-  //   RENDEROWANIE LISTY PRODUKTÓW
-  // ------------------------------
-  function renderProducts() {
-    console.log("renderProducts() – rysuję listę produktów");
-    const container = document.getElementById('productList');
-    if (!container) {
-      console.error("Nie znaleziono elementu #productList");
-      return;
-    }
+// Eventy
+sectionFilter.addEventListener("change", renderProducts);
+categoryFilter.addEventListener("change", renderProducts);
+searchInput.addEventListener("input", renderProducts);
+btnExport.addEventListener("click", exportOrder);
+btnClear.addEventListener("click", clearCart);
 
-    container.innerHTML = '';
-
-    const products = state.catalog || [];
-
-    if (products.length === 0) {
-      container.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">Brak produktów w bazie</div>';
-      return;
-    }
-
-    products.forEach(product => {
-      const item = document.createElement('div');
-      item.className = 'item row row--gap';
-      item.style.marginBottom = '12px';
-      item.style.padding = '12px';
-      item.style.background = 'rgba(255,255,255,0.05)';
-      item.style.borderRadius = '12px';
-      item.innerHTML = `
-        <div style="flex:1; font-weight:600;">${product.name || 'Bez nazwy'}</div>
-        <div style="color:#aaa; min-width:100px;">${product.category || '-'}</div>
-        <input type="number" min="1" step="1" class="qty" placeholder="ilość" data-id="${product.id}" style="width:80px; text-align:center;" />
-        <button class="btn primary add-to-cart" data-id="${product.id}">Dodaj</button>
-      `;
-      container.appendChild(item);
-    });
-
-    console.log(`Wyrenderowano ${products.length} produktów`);
-  }
-
-  function renderAll() {
-    console.log("renderAll() uruchomione");
-    renderProducts();
-    // Tutaj możesz dodać render koszyka, nagłówka itp. w przyszłości
-    // np. renderCart();
-    // updateCartCount();
-  }
-
-  // ------------------------------
-  //   PODPINANIE PRZYCISKÓW (wire)
-  // ------------------------------
-  function wire() {
-    console.log("wire() – podpinam eventy");
-
-    // Przykład: przycisk "Dodaj" (jeśli używasz klasy .add-to-cart)
-    document.querySelectorAll('.add-to-cart').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = e.target.dataset.id;
-        const qtyInput = e.target.previousElementSibling; // input qty
-        const qty = parseInt(qtyInput.value) || 1;
-        console.log(`Dodaję do koszyka produkt ${id} w ilości ${qty}`);
-        // Tutaj dodaj logikę dodawania do koszyka (np. state.cart.push(...))
-        qtyInput.value = ''; // wyczyść pole
-      });
-    });
-
-    // Dodaj inne eventy, np. przycisk "Baza", "Eksport", "Ulubione" itd.
-    // document.getElementById('btnGoCatalog').addEventListener('click', () => { ... });
-  }
-
-  // ------------------------------
-  //   START APLIKACJI
-  // ------------------------------
-  function boot(){
-    console.log("boot() started");
-    load();
-    ensureSeed();
-    renderAll();
-    wire();
-    // Tutaj możesz dodać initFirebase(), liveBindUI() itp. z Twojego oryginalnego kodu
-    console.log("Aplikacja uruchomiona – gotowa do użycia");
-  }
-
-  boot();
-
-})();
+// Start
+populateFilters();
+renderProducts();
